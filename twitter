@@ -1,0 +1,101 @@
+api_key <- '.....'
+api_secret <- '......'
+access_token <- "....."
+access_token_secret <- "......"
+
+
+library(twitteR)
+setup_twitter_oauth(api_key, api_secret, access_token, access_token_secret)
+
+
+p <- userTimeline('muratpak', n=3200)
+p
+
+
+
+twListToDF(p)
+pdf <- twListToDF(p)
+write.csv(pdf, file = "p1.csv", row.names=F)
+read.csv("p1.csv")
+preadhead <- read.csv(file.choose(), header = T)
+str(preadhead)
+
+library(tm)
+
+corpus <- iconv(preadhead$text, to = "UTF-8")
+corpus <- Corpus(VectorSource(corpus))
+inspect(corpus[1:10])
+
+corpusclean <- tm_map(corpus, tolower)
+inspect(corpusclean[1:5])
+corpusclean2 <- tm_map(corpusclean, removePunctuation)
+
+inspect(corpusclean2[1:5])
+corpusclean3 <- tm_map(corpusclean2, removeNumbers)
+
+inspect(corpusclean3[1:5])
+corpusclean4 <- tm_map(corpusclean3, removeWords, stopwords('english'))
+
+
+inspect(corpusclean4[1:5])
+removeURL <- function(x) gsub('http[[:alnum:]]*', '', x)
+corpusclean5 <- tm_map(corpusclean4, content_transformer(removeURL))
+inspect(corpusclean5[1:5])
+
+
+corpusclean6 <- tm_map(corpusclean5, stripWhitespace)
+inspect(corpusclean6[1:5])
+
+
+tdm <- TermDocumentMatrix(corpusclean6)
+tdm
+tdm2 <- as.matrix(tdm)
+tdm2[1:10, 1:20]
+
+
+FrequencyCount <- rowSums(tdm2)
+FrequencyCount
+
+
+write.csv(FrequencyCount, file = "FrequencyCount2.csv", row.names=T)
+
+
+
+FrequencyCountSubset <- subset(FrequencyCount, FrequencyCount>=5)
+FrequencyCountSubset
+
+barplot(FrequencyCountSubset,
+        las = 2,
+        col = rainbow(5))
+
+library(wordcloud)
+makecloud <- sort(rowSums(tdm2), decreasing = TRUE)
+set.seed(110)
+wordcloud(words = names(makecloud),
+          freq = makecloud)
+
+
+library(syuzhet)
+library(lubridate)
+library(ggplot2)
+library(scales)
+library(reshape2)
+library(dplyr)
+
+
+preadheadsentiment <- read.csv(file.choose(), header = T)
+tweets <- iconv(preadheadsentiment$text, to = "UTF-8")
+s <- get_nrc_sentiment(tweets)
+head(s)
+tail(s)
+s
+
+get_nrc_sentiment('good')
+get_nrc_sentiment('bad')
+
+
+barplot(colSums(s),
+        las = 2,
+        col = rainbow(2),
+        ylab = 'Count',
+        main = "Sentiment Scores for muratpak tweets")
